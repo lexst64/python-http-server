@@ -1,0 +1,15 @@
+# python
+__pycache__
+
+# db files
+*.sqlite
+
+# vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+
