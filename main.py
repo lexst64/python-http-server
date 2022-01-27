@@ -19,6 +19,12 @@ Keyword = TypeVar('Keyword', str, str)
 Value = TypeVar('Value', str, str)
 
 
+def dict_to_json_string(__dict: dict, encode: bool = False) -> str | bytes:
+    if encode:
+        return json.dumps(__dict).encode('utf-8')
+    return json.dumps(__dict)
+
+
 def generate_http_headers(content_type='text/html', charset='utf-8', content_language='en'):
     headers = {
         'Content-type': f'{content_type}; charset={charset}',
@@ -32,27 +38,24 @@ def generate_http_headers(content_type='text/html', charset='utf-8', content_lan
 
 
 def search_words_by_match(sorted_words: list | tuple, match: str) -> list:
-    sorted_words = sorted_words.copy()
-    match = match.lower()
+    match = match.lower().strip()
 
-    found_words = []
-    low = 0
-    high = len(sorted_words) - 1
-    while high >= low:
-        mid = (high + low) // 2
+    if not sorted_words:
+        return sorted_words
 
-        guess: str = sorted_words[mid]
-        guess_part = guess[:len(match)].lower()
+    mid_index = len(sorted_words) // 2
 
-        if guess_part == match:
-            found_words.append(sorted_words[mid])
-            del sorted_words[mid]
-            high = len(sorted_words) - 1
-        elif guess_part > match:
-            high = mid - 1
-        else:
-            low = mid + 1
-    return found_words
+    guess = sorted_words[mid_index]
+    guess_part = guess[:len(match)].lower()
+
+    if guess_part == match:
+        sorted_words_copy = list(sorted_words)
+        del sorted_words_copy[mid_index]
+        return [guess] + search_words_by_match(sorted_words_copy, match)
+    elif guess_part > match:
+        return search_words_by_match(sorted_words[:mid_index], match)
+    else:
+        return search_words_by_match(sorted_words[mid_index + 1:], match)
 
 
 def send_response(
@@ -86,11 +89,13 @@ def GET_nicknames(http_request_handler: BaseHTTPRequestHandler, queries: dict):
     data = {
         'nicknames': nicknames,
     }
+
     if 'match' in queries:
         match = queries['match']
         found_nicknames = search_words_by_match(nicknames, match)
         data['nicknames'] = found_nicknames
-    data = json.dumps(data).encode('utf-8')
+    
+    data = dict_to_json_string(data, True)
     send_response(http_request_handler, (200, 'OK'),
                   headers=headers, data=data)
 
@@ -136,7 +141,7 @@ def create_response_args_generator(http_request_handler, ):
     def generator(err, *, code=500, desc=''):
         return [http_request_handler, (code, desc)], {
             'headers': generate_http_headers('application/json'),
-            'data': json.dumps({'error': str(err)}).encode('utf-8'),
+            'data': dict_to_json_string({'error': str(err)}, True),
         }
     return generator
 
@@ -180,7 +185,7 @@ def POST_new_user(http_request_handler: BaseHTTPRequestHandler, queries: dict):
 def GET_page_not_found(http_request_handler: BaseHTTPRequestHandler, queries: dict):
     headers = generate_http_headers()
     with open('assets/page_not_found.html') as file:
-        data: bytes = ''.join(file).encode('utf-8')
+        data = ''.join(file).encode('utf-8')
     send_response(http_request_handler, (404, 'page not found'),
                   headers=headers, data=data)
 
