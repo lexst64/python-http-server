@@ -127,7 +127,7 @@ def get_nicknames_from_database() -> list:
 
 
 # TODO: rename function
-def fn(form: cgi.FieldStorage, params: list):
+def process_form(form: cgi.FieldStorage, params: list):
     result_params = {}
     for param in params:
         value = form.getvalue(param)
@@ -151,42 +151,50 @@ class CustomError(Exception):
 
 
 CODES = {
-    500: {'code': 500, 'desc': 'Internal Server Error'},
-    400: {'code': 400, 'desc': 'Bad Request'},
+    500: 'Internal Server Error',
+    400: 'Bad Request',
+    200: 'OK',
+    404: 'Page Not Found',
 }
 
 
+def create_error_data(error_message: str) -> bytes:
+    data = {
+        'error_message': str(error_message),
+    }
+    return dict_to_json_string(data, True)
+
+
 def POST_new_user(http_request_handler: BaseHTTPRequestHandler, queries: dict):
-    headers = generate_http_headers('plain/text')
-    form = cgi.FieldStorage(
-        http_request_handler.rfile,
-        http_request_handler.headers,
-        environ={'REQUEST_METHOD': 'POST'},
-    )
+    headers = generate_http_headers('application/json')
+
+    data = get_json_request_body(http_request_handler)
+
     try:
-        params = fn(form, ['nickname', 'password', 'name'])
-        add_user_to_database(**params)
-    except Exception as err:
-        error_args_generator = create_response_args_generator(
-            http_request_handler)
-        error_response = {
-            UserDataVerifyError: CODES[400],
-            sqlite3.DatabaseError: CODES[500],
-            CustomError: CODES[400],
-            'default': CODES[500],
+        params = {
+            'nickname': data['nickname'],
+            'name': data['name'],
+            'password': data['password'],
         }
-        arg1, arg2 = error_args_generator(err, **(error_response.get(type(err))
-                                                  or error_response.get('default')))
-        send_response(*arg1, **arg2)
+        add_user_to_database(**params)
+    except KeyError as err:
+        error_data = create_error_data(f'{err} param is missing')
+        send_response(http_request_handler, (400, CODES[400]), headers=headers, data=error_data)
+    except sqlite3.DatabaseError as err:
+        error_data = create_error_data(f'database error: {err}')
+        send_response(http_request_handler, (500, CODES[500]), headers=headers, data=error_data)
+    except UserDataVerifyError as err:
+        error_data = create_error_data(err)
+        send_response(http_request_handler, (400, CODES[400]), headers=headers, data=error_data)
     else:
-        send_response(http_request_handler, (200, 'OK'), headers=headers)
+        send_response(http_request_handler, (200, CODES[200]), headers=headers)
 
 
 def GET_page_not_found(http_request_handler: BaseHTTPRequestHandler, queries: dict):
     headers = generate_http_headers()
     with open('assets/page_not_found.html') as file:
         data = ''.join(file).encode('utf-8')
-    send_response(http_request_handler, (404, 'page not found'),
+    send_response(http_request_handler, (404, CODES[404]),
                   headers=headers, data=data)
 
 
@@ -197,6 +205,17 @@ ROUTES = {
     # post-s
     '/user/register': POST_new_user,
 }
+
+
+def get_content_length(http_request_handler: BaseHTTPRequestHandler) -> int:
+    length: int | str = http_request_handler.headers.get('content-length', 0)
+    return int(length)
+
+
+def get_json_request_body(http_request_handler: BaseHTTPRequestHandler) -> dict:
+    length = get_content_length(http_request_handler)
+    data = json.loads(http_request_handler.rfile.read(length))
+    return data
 
 
 class CustomHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -228,7 +247,8 @@ class CustomHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 def run():
-    ip_addr = socket.gethostbyname(socket.gethostname())
+    # ip_addr = socket.gethostbyname(socket.gethostname())
+    ip_addr = 'localhost'
     http_server = HTTPServer((ip_addr, PORT), CustomHTTPRequestHandler)
     try:
         print(ip_addr)

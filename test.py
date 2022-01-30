@@ -1,4 +1,7 @@
 # recursion
+from types import TracebackType
+
+
 def __search_words_by_match(sorted_words: list | tuple, match: str) -> list:
     match = match.lower().strip()
 
@@ -46,5 +49,13 @@ def search_words_by_match(sorted_words: list | tuple, match: str) -> list:
 
 
 if __name__ == '__main__':
-    words = sorted(['alex', 'daria', 'alexey', 'align', 'john'])
-    print(__search_words_by_match(words, 'al'))
+    class UserDataVerifyError(Exception):
+        def __init__(self, dataname: str, explanation: str) -> None:
+            message = f"{dataname} isn't correct - {explanation}"
+            super().__init__(message)
+
+    try:
+        raise UserDataVerifyError('nickname', 'idk')
+    except UserDataVerifyError as err:
+        print(str(err))
+

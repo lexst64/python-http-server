@@ -24,12 +24,27 @@ class UserDataVerifyError(Exception):
     def __init__(self, dataname: str, explanation: str) -> None:
         message = f"{dataname} isn't correct - {explanation}"
         super().__init__(message)
+    
+
+def verify_string_by_pattern(string: str, pattern: str):
+    try:
+        match = re.match(pattern, string)
+        if match:
+            return True
+    except TypeError:
+        return False
+    else:
+        return False
 
 
 def verify_nickname(nickname: str) -> bool:
-    if re.match(USERNAME_PATTERN, nickname):
-        return True
-    return False
+    try:
+        if re.match(USERNAME_PATTERN, nickname):
+            return True
+    except TypeError:
+        return False
+    else:
+        return False
 
 
 def verify_name(name: str) -> bool:
@@ -44,6 +59,7 @@ def verify_password(password: str) -> bool:
     return False
 
 
+# raises UserDataVerifyError
 def verify_user_data(nickname: str, name: str, password: str) -> bool|None:
     results = {
         'nickname': verify_nickname(nickname),
