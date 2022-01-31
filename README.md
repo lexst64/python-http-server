@@ -1,3 +1,9 @@
 This is my first http server
 
-Using $ pipenv run ensures that your installed packages are available to your script. It’s also possible to spawn a new shell that ensures all commands have access to your installed packages with $ pipenv shell
+To install all the project dependencies:
+1. cd %path to cloned project%
+2. virtualenv venv                      # install virtual env to project
+3. venv/Scripts/activate                # to run the virtual env
+4. pip install -r requirements.txt      # install all the project deps in the current virtual env
+5. py source/main.py                    # run the backend-server
+
