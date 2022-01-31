@@ -1,0 +1,47 @@
+html, body {
+    height: 100%;
+}
+
+h1 {
+    font-size: 28px;
+    margin: 35px 25px;
+}
+
+h2 {
+    font-size: 24px;
+    margin: 30px 20px;
+}
+
+.app {
+    display: flex;
+    flex-flow: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.form {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+.form__input {
+    padding: 10px 10px;
+}
+
+.form__input.right {
+    border: 2px solid rgb(108, 235, 125);
+}
+
+.form__input.wrong {
+    border: 2px solid rgb(228, 87, 87);
+}
+
+.form__input:not(:last-child) {
+    margin-bottom: 5px;
+}
+
+.register-form {
+    width: 400px;
+}

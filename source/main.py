@@ -1,5 +1,4 @@
 import sqlite3
-import cgi
 import json
 import socket
 from typing import Dict, Tuple, TypeVar
@@ -9,7 +8,7 @@ from urllib.parse import urlparse, parse_qs
 
 
 PORT = 5000
-DB_PATH = 'Chinook_Sqlite.sqlite'
+DB_PATH = '../database/Chinook_Sqlite.sqlite'
 PATH_PARSE_SCHEME = '<path>;<params>?<query>#<fragment>'
 
 
@@ -66,10 +65,12 @@ def send_response(
     data: bytes = None,
 ):
     http_request_handler.send_response(*response)
+
     if headers:
         for key, value in headers.items():
             http_request_handler.send_header(key, value)
     http_request_handler.end_headers()
+
     if data:
         http_request_handler.wfile.write(data)
 
@@ -100,18 +101,19 @@ def GET_nicknames(http_request_handler: BaseHTTPRequestHandler, queries: dict):
                   headers=headers, data=data)
 
 
-def add_user_to_database(*, nickname: str, name: str, password: str):
+def add_user_to_database(*, nickname: str, name: str, password: str, email: str):
     # raises UserDataVerifyError if failed
-    verify_user_data(nickname, name, password)
+    verify_user_data(nickname, name, password, email)
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()
     params = {
         'nickname': nickname,
         'name': name,
-        "password": password,
+        'password': password,
+        'email': email,
     }
     cursor.execute(
-        'insert into User values (Null, :nickname, :name, :password)', params)
+        'insert into User values (Null, :nickname, :name, :password, :email)', params)
     connection.commit()
     connection.close()
 
@@ -124,30 +126,6 @@ def get_nicknames_from_database() -> list:
     nicknames = [nickname[0] for nickname in cursor.fetchall()]
     connection.close()
     return nicknames
-
-
-# TODO: rename function
-def process_form(form: cgi.FieldStorage, params: list):
-    result_params = {}
-    for param in params:
-        value = form.getvalue(param)
-        if value is None:
-            raise CustomError('param error')
-        result_params[param] = value
-    return result_params
-
-
-def create_response_args_generator(http_request_handler, ):
-    def generator(err, *, code=500, desc=''):
-        return [http_request_handler, (code, desc)], {
-            'headers': generate_http_headers('application/json'),
-            'data': dict_to_json_string({'error': str(err)}, True),
-        }
-    return generator
-
-
-class CustomError(Exception):
-    ...
 
 
 CODES = {
@@ -175,6 +153,7 @@ def POST_new_user(http_request_handler: BaseHTTPRequestHandler, queries: dict):
             'nickname': data['nickname'],
             'name': data['name'],
             'password': data['password'],
+            'email': data['email'],
         }
         add_user_to_database(**params)
     except KeyError as err:
